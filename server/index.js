@@ -12,7 +12,6 @@ app.use(express.json());
 app.post("/users", async (req, res) => {
     try {
         const { user_name, user_email, user_password } = req.body
-        console.log(user_name, user_email, user_password)
         const newUser = await pool.query(
             `INSERT INTO users (user_uid, user_name, user_email, user_password, user_status, user_joined) 
             VALUES (uuid_generate_v4(), $1, $2, crypt('${user_password}', gen_salt('bf')), FALSE, CURRENT_DATE)
@@ -36,12 +35,12 @@ app.get("/users", async (req, res) => {
 })
 
 //get user by name 
-app.get("/users/:name", async (req, res) => {
+app.get("/users/:uid", async (req, res) => {
     try {
-        const { name } = req.params
+        const { uid } = req.params
         const user = await pool.query(
-            "SELECT * FROM users WHERE user_name = $1",
-            [name]
+            "SELECT * FROM users WHERE user_uid = $1",
+            [uid]
         )
 
         res.json(user.rows[0])
@@ -66,12 +65,14 @@ app.put("/users/:uid", async (req, res) => {
 })
 
 // delete user
-app.delete("/user/:uid", async (req, res) => {
+app.delete("/users/:id", async (req, res) => {
     try {
-        const { uid } = req.params
+        const { id } = req.params
         const deleteUser = await pool.query(
-            `DELETE FROM users WHERE`
+            `DELETE FROM users WHERE user_uid = $1`,
+            [id]
         )
+        res.json('User deleted')
     } catch (err) {
         console.error(err.message)
     }
@@ -81,10 +82,12 @@ app.delete("/user/:uid", async (req, res) => {
 // create post
 app.post("/posts", async (req, res) => {
     try {
-        const { post } = req.body
+        const { post_title, post_content, post_author } = req.body
         const newPost = await pool.query(
-            "",
-            []
+            `INSERT INTO posts (post_title, post_content, post_author, post_date) 
+            VALUES ($1, $2, $3, CURRENT_DATE)
+            RETURNING *`,
+            [post_title, post_content, post_author]
         )
         res.json(`New post added`)
     } catch (err) {
@@ -92,13 +95,56 @@ app.post("/posts", async (req, res) => {
     }
 })
 // get post
-
+app.get("/posts/:id", async (req, res) => {
+    try {
+        const { id } = req.params
+        const post = await pool.query(
+            'SELECT * FROM posts WHERE post_id = $1',
+            [id]
+        )
+        res.json(post.rows[0])
+    } catch (err) {
+        res.json(err.message)
+    }
+})
 // get all posts
-
-
-// update post
-
+app.get("/posts", async (req, res) => {
+    try {
+        const allPosts = await pool.query(
+            'SELECT * FROM posts'
+        )
+        res.json(allPosts.rows)
+    } catch (err) {
+        res.json(err.message)
+    }
+})
+// update post by id
+app.put("/posts/:id", async (req, res) => {
+    try {
+        const { id } = req.params
+        const { post_title, post_content } = req.body
+        const updatePost = await pool.query(
+            'UPDATE posts SET post_title = $1, post_content = $2 WHERE post_id = $3',
+            [post_title, post_content, id]
+        )
+        res.json('Post updated')
+    } catch (err) {
+        res.json(err.message)
+    }
+})
 // delete post 
+app.delete("/posts/:id", async (req, res) => {
+    try {
+        const { id } = req.params
+        const deletePost = await pool.query(
+            "DELETE FROM posts WHERE post_id = $1",
+            [id]
+        )
+        res.json("post deleted")
+    } catch (err) {
+        res.json(err.message)
+    }
+})
 
 //ROUTES CATEGORIES
 // create cat
