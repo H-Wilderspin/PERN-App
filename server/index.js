@@ -34,7 +34,7 @@ app.get("/users", async (req, res) => {
     }
 })
 
-//get user by name 
+//get user by uid
 app.get("/users/:uid", async (req, res) => {
     try {
         const { uid } = req.params
@@ -99,7 +99,9 @@ app.get("/posts/:id", async (req, res) => {
     try {
         const { id } = req.params
         const post = await pool.query(
-            'SELECT * FROM posts WHERE post_id = $1',
+            `SELECT post_id, post_title, post_content, post_date, user_name from posts
+            JOIN users ON post_author = user_uid
+            WHERE post_id = $1`,
             [id]
         )
         res.json(post.rows[0])
